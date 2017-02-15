@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Identicon generator</title>
+    <script src="https://code.jquery.com/jquery-3.1.1.min.js" integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/underscore.js/1.8.3/underscore-min.js" integrity="sha256-obZACiHd7gkOk9iIL/pimWMTJ4W/pBsKu+oZnSeBIek=" crossorigin="anonymous"></script>
+    <script src="hashes.js"></script>
+    <script>
+        var hashes = {
+            "MD5": {
+                func: new Hashes.MD5,
+                length: 16
+            },
+            "SHA1": {
+                func: new Hashes.SHA1,
+                length: 20
+            },
+            "SHA256": {
+                func: new Hashes.SHA256,
+                length: 32
+            },
+            "SHA512": {
+                func: new Hashes.SHA512,
+                length: 64
+            },
+            "RMD160": {
+                func: new Hashes.RMD160,
+                length: 20
+            },
+        };
+        var defaultHash = "MD5";
+
+        var sizes = [3, 5, 7, 9, 11];
+        var defaultSize = 5;
+
+        $(document).ready(function() {
+            _.each(hashes, function(v, key) {
+                $("#hashmethods").append($("<option>").text(key).attr("value", key));
+            });
+            $("#hashmethods").val(defaultHash);
+
+            _.each(sizes, function(s) {
+                $("#size").append($("<option>").text(s).attr("value", s));
+            });
+            $("#size").val(defaultSize);
+
+            $("#horizontalMirror").prop("checked", true);
+
+            function updateIdenticon() {
+                var hashmethod = hashes[$("#hashmethods").val()];
+                var text = $("#plaintext").val();
+                var hash = hashmethod.func.raw(text);
+                var cellColor = '#' + hashmethod.func.hex(text).substring(0, 6);
+
+                console.log(hash.length, _.map(hash, function(x) { return x.charCodeAt(0); }));
+                var identicon = $("#identicon");
+                identicon.empty();
+                var horizontalMirror = $("#horizontalMirror").is(":checked");
+
+                var valueAt = function(idx) {
+                    return (hash.charCodeAt(idx % hash.length) % 2 == 0);
+                };
+                var idxOf = function(rowIdx, colIdx) {
+                    if (horizontalMirror) {
+                        if (colIdx > size / 2) {
+                            colIdx = size - colIdx - 1;
+                        }
+                        // return rowIdx * Math.ceil(size / 2) + colIdx;
+                        return rowIdx * size + colIdx;
+                    } else {
+                        return rowIdx * size + colIdx;
+                    }
+                };
+
+                var size = +($("#size").val());
+                _.times(size, function(rowIdx) {
+                    var row = $("<div class='row'>").appendTo(identicon);
+                    _.times(size, function(colIdx) {
+                        var cellFilled = valueAt(idxOf(rowIdx, colIdx));
+                        var cell = $("<div class='cell'>");
+                        if (cellFilled) {
+                            cell.css("background-color", cellColor);
+                        }
+                        cell.appendTo(row);
+                    });
+                });
+            }
+
+            $("#hashmethods").change(updateIdenticon);
+            $("#plaintext").on('keyup', updateIdenticon);
+            $("#size").change(updateIdenticon);
+            $("#horizontalMirror").change(updateIdenticon);
+            updateIdenticon();
+        });
+    </script>
+    <style>
+        .row {
+            height: 50px;
+        }
+        .cell {
+            margin: 0;
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+        }
+    </style>
+</head>
+<body>
+    <select id="hashmethods"></select>
+    text: <input type="text" id="plaintext">
+    <select id="size"></select>
+    <label><input type="checkbox" id="horizontalMirror">Horizontal Mirror</label>
+    <div id="identicon"></div>
+</body>
+</html>
